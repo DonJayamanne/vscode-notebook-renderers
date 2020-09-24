@@ -4,7 +4,7 @@
 import type { nbformat } from '@jupyterlab/coreutils';
 import type { JSONObject } from '@phosphor/coreutils';
 import * as React from 'react';
-import { concatMultilineStringInput, concatMultilineStringOutput } from './helpers';
+import { concatMultilineStringOutput } from './helpers';
 import { fixLatexEquations } from './latexManipulation';
 import { fixMarkdown } from './markdownManipulation';
 import { getTransform } from './transforms';
