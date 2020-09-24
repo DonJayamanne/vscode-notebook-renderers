@@ -5,10 +5,11 @@
 // eslint-disable-next-line no-unused-vars
 declare let __webpack_public_path__: string;
 const getPublicPath = () => {
-  const currentDirname = (document.currentScript as HTMLScriptElement).src.replace(/[^/]+$/, '');
-  return new URL(currentDirname).toString();
+    const currentDirname = (document.currentScript as HTMLScriptElement).src.replace(/[^/]+$/, '');
+    return new URL(currentDirname).toString();
 };
 
+// eslint-disable-next-line prefer-const
 __webpack_public_path__ = getPublicPath();
 // This must be on top, do not change. Required by webpack.
 
