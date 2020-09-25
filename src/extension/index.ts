@@ -13,3 +13,5 @@ export function activate(context: ExtensionContext): { rendererPath: string } {
 export function deactivate(): void {
     // Noop.
 }
+
+// const notebookApi = acquireNotebookRendererApi(JupyterIPyWidgetNotebookRenderer);
