@@ -75,7 +75,7 @@ module.exports = [
     {
         mode: isProdBuild ? 'production' : 'development',
         devtool: isProdBuild ? 'source-map' : 'inline-source-map',
-        entry: path.join(outDir, 'index.js'),
+        entry: path.join(outDir, 'integration','index.js'),
         output: {
             filename: 'ipywidgets.js',
             path: path.resolve(outDir, 'dist'),

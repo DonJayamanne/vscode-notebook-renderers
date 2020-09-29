@@ -1,22 +1,292 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+// This must be on top, do not change. Required by webpack.
+declare let __webpack_public_path__: string;
+const getPublicPath = () => {
+    const currentDirname = (document.currentScript as HTMLScriptElement).src.replace(/[^/]+$/, '');
+    return new URL(currentDirname).toString();
+};
+
+// eslint-disable-next-line prefer-const
+__webpack_public_path__ = getPublicPath();
+// This must be on top, do not change. Required by webpack.
+
+// export { JupyterlabWidgetManager as WidgetManager } from './base/manager';
+import * as base from '@jupyter-widgets/base';
+import * as widgets from '@jupyter-widgets/controls';
+import * as outputWidgets from '@jupyter-widgets/jupyterlab-manager/lib/output';
+import './widgets.css';
+
+// Export the following for `requirejs`.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, no-empty, @typescript-eslint/no-empty-function
+const define = (window as any).define || function () {};
+define('@jupyter-widgets/controls', () => widgets);
+define('@jupyter-widgets/base', () => base);
+define('@jupyter-widgets/output', () => outputWidgets);
+
+////////////////////////// not change. Required by webpack.
+const JupyterIPyWidgetNotebookRenderer = 'jupyter-ipywidget-renderer';
+// initialize(acquireNotebookRendererApi(JupyterIPyWidgetNotebookRenderer));
+
+
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 'use strict';
 
 import type { nbformat } from '@jupyterlab/coreutils';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createDeferred, Deferred } from './misc/async';
-import { WidgetManagerComponent } from './container';
+// import { WidgetManagerComponent } from './container';
 import { createEmitter } from './events';
-import { WidgetManager } from './manager';
-import { IPyWidgetMessages, WidgetScriptSource, Event, IPyWidgetsPostOffice, IPyWidgetsSettings } from './types';
+import { IPyWidgetMessages, WidgetScriptSource, Event, IPyWidgetsPostOffice, IPyWidgetsSettings, IIPyWidgetManager } from './types';
 import type { NotebookOutputEventParams, NotebookRendererApi } from 'vscode-notebook-renderer';
+import { getInstance } from './manager';
+
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
+'use strict';
+
+import * as isonline from 'is-online';
+// import '../../client/common/extensions';
+// import { warnAboutWidgetVersionsThatAreNotSupported } from './incompatibleWidgetHandler';
+import { createManager } from './manager';
+import { registerScripts } from './requirejsRegistry';
+import { SharedMessages,  } from './types';
+
+type Props = {
+    postOffice: IPyWidgetsPostOffice;
+    widgetContainerElement: string | HTMLElement;
+};
+
+class WidgetManagerComponent extends React.Component<Props> {
+    private readonly widgetManager: IIPyWidgetManager;
+    private readonly widgetSourceRequests = new Map<
+        string,
+        { deferred: Deferred<void>; timer?: NodeJS.Timeout | number }
+    >();
+    private readonly registeredWidgetSources = new Map<string, WidgetScriptSource>();
+    private timedOutWaitingForWidgetsToGetLoaded?: boolean;
+    private widgetsCanLoadFromCDN = true; // Temporary.
+    private readonly loaderSettings = {
+        // Total time to wait for a script to load. This includes ipywidgets making a request to extension for a Uri of a widget,
+        // then extension replying back with the Uri (max 5 seconds round trip time).
+        // If expires, then Widget downloader will attempt to download with what ever information it has (potentially failing).
+        // Note, we might have a message displayed at the user end (asking for consent to use CDN).
+        // Hence use 60 seconds.
+        timeoutWaitingForScriptToLoad: 60_000,
+        // List of widgets that must always be loaded using requirejs instead of using a CDN or the like.
+        widgetsRegisteredInRequireJs: new Set<string>(),
+        // Callback when loading a widget fails.
+        errorHandler: this.handleLoadError.bind(this),
+        // Callback when requesting a module be registered with requirejs (if possible).
+        loadWidgetScript: this.loadWidgetScript.bind(this),
+        successHandler: this.handleLoadSuccess.bind(this)
+    };
+    constructor(props: Props) {
+        super(props);
+        const ele =
+            typeof this.props.widgetContainerElement === 'string'
+                ? document.getElementById(this.props.widgetContainerElement)
+                : this.props.widgetContainerElement;
+        // this.widgetManager = new WidgetManager(ele, this.props.postOffice, this.loaderSettings);
+        this.widgetManager = createManager(ele, this.props.postOffice, this.loaderSettings);
+
+        props.postOffice.onDidReceiveKernelMessage((msg) => {
+            // tslint:disable-next-line: no-any
+            const type = msg.type;
+            const payload = msg.payload;
+            if (type === SharedMessages.UpdateSettings) {
+                // tslint:disable-next-line: no-console
+                // console.error('Got Message 1');
+                const settings = JSON.parse(payload);
+                this.widgetsCanLoadFromCDN = settings.widgetScriptSources.length > 0;
+            } else if (
+                type === IPyWidgetMessages.IPyWidgets_kernelOptions ||
+                type === IPyWidgetMessages.IPyWidgets_onKernelChanged
+            ) {
+                // tslint:disable-next-line: no-console
+                // console.error('Got Message 2');
+                // This happens when we have restarted a kernel.
+                // If user changed the kernel, then some widgets might exist now and some might now.
+                this.widgetSourceRequests.clear();
+                this.registeredWidgetSources.clear();
+                // } else {
+                //     // tslint:disable-next-line: no-console
+                //     console.error(`Got unknown Message 2 ${type}`, msg);
+            }
+        });
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    public render(): any {
+        return null;
+    }
+    public componentWillUnmount() {
+        this.widgetManager.dispose();
+    }
+    private async handleLoadError(
+        className: string,
+        moduleName: string,
+        moduleVersion: string,
+        // tslint:disable-next-line: no-any
+        error: any,
+        timedout = false
+    ) {
+        if (!this.props.postOffice.onWidgetLoadFailure) {
+            return;
+        }
+        const isOnline = await isonline.default({ timeout: 1000 });
+        this.props.postOffice.onWidgetLoadFailure({
+            className,
+            moduleName,
+            moduleVersion,
+            isOnline,
+            timedout,
+            error,
+            cdnsUsed: this.widgetsCanLoadFromCDN
+        });
+    }
+    /**
+     * Given a list of the widgets along with the sources, we will need to register them with requirejs.
+     * IPyWidgets uses requirejs to dynamically load modules.
+     * (https://requirejs.org/docs/api.html)
+     * All we're doing here is given a widget (module) name, we register the path where the widget (module) can be loaded from.
+     * E.g.
+     * requirejs.config({ paths:{
+     *  'widget_xyz': '<Url of script without trailing .js>'
+     * }});
+     */
+    private registerScriptSourcesInRequirejs(sources: WidgetScriptSource[]) {
+        if (!Array.isArray(sources) || sources.length === 0) {
+            return;
+        }
+
+        registerScripts(sources);
+
+        // Now resolve promises (anything that was waiting for modules to get registered can carry on).
+        sources.forEach((source) => {
+            this.registeredWidgetSources.set(source.moduleName, source);
+            // We have fetched the script sources for all of these modules.
+            // In some cases we might not have the source, meaning we don't have it or couldn't find it.
+            let request = this.widgetSourceRequests.get(source.moduleName);
+            if (!request) {
+                request = {
+                    deferred: createDeferred(),
+                    timer: undefined
+                };
+                this.widgetSourceRequests.set(source.moduleName, request);
+            }
+            request.deferred.resolve();
+            if (request.timer !== undefined) {
+                // tslint:disable-next-line: no-any
+                clearTimeout(request.timer as any); // This is to make this work on Node and Browser
+            }
+        });
+    }
+    private registerScriptSourceInRequirejs(source?: WidgetScriptSource) {
+        if (!source) {
+            return;
+        }
+        this.registerScriptSourcesInRequirejs([source]);
+    }
+
+    /**
+     * Method called by ipywidgets to get the source for a widget.
+     * When we get a source for the widget, we register it in requriejs.
+     * We need to check if it is available on CDN, if not then fallback to local FS.
+     * Or check local FS then fall back to CDN (depending on the order defined by the user).
+     */
+    private loadWidgetScript(moduleName: string, moduleVersion: string): Promise<void> {
+        // tslint:disable-next-line: no-console
+        console.log(`Fetch IPyWidget source for ${moduleName}`);
+        let request = this.widgetSourceRequests.get(moduleName);
+        if (request) {
+            console.error(`Re-use loading module ${moduleName}`);
+        } else {
+            console.error(`Start loading module ${moduleName}`);
+            request = {
+                deferred: createDeferred<void>(),
+                timer: undefined
+            };
+
+            // If we timeout, then resolve this promise.
+            // We don't want the calling code to unnecessary wait for too long.
+            // Else UI will not get rendered due to blocking ipywidets (at the end of the day ipywidgets gets loaded via kernel)
+            // And kernel blocks the UI from getting processed.
+            // Also, if we timeout once, then for subsequent attempts, wait for just 1 second.
+            // Possible user has ignored some UI prompt and things are now in a state of limbo.
+            // This way things will fall over sooner due to missing widget sources.
+            const timeoutTime = this.timedOutWaitingForWidgetsToGetLoaded
+                ? 5_000
+                : this.loaderSettings.timeoutWaitingForScriptToLoad;
+
+            request.timer = setTimeout(() => {
+                if (request && !request.deferred.resolved) {
+                    // tslint:disable-next-line: no-console
+                    console.error(`Timeout waiting to get widget source for ${moduleName}, ${moduleVersion}`);
+                    this.handleLoadError(
+                        '<class>',
+                        moduleName,
+                        moduleVersion,
+                        new Error(`Timeout getting source for ${moduleName}:${moduleVersion}`),
+                        true
+                        // tslint:disable-next-line: no-console
+                    ).catch((ex) => console.error('Failed to load in container.tsx', ex));
+                    request.deferred.resolve();
+                    this.timedOutWaitingForWidgetsToGetLoaded = true;
+                }
+            }, timeoutTime);
+
+            this.widgetSourceRequests.set(moduleName, request);
+
+            // Whether we have the scripts or not, send message to extension.
+            // Useful telemetry and also we know it was explicity requested by ipywidgets.
+            this.props.postOffice
+                .getWidgetScriptSource({
+                    moduleName,
+                    moduleVersion
+                })
+                .then((result) => this.registerScriptSourceInRequirejs(result))
+                // tslint:disable-next-line: no-console
+                .catch((ex) => console.error(`Failed to fetch scripts for ${moduleName}, ${moduleVersion}`, ex));
+        }
+
+        return (
+            request.deferred.promise
+                .then(() => {
+                    // tslint:disable-next-line: no-console
+                    console.error(`Attempting to load module ${moduleName}`);
+                })
+                // tslint:disable-next-line: no-any
+                .catch((ex: any) =>
+                    // tslint:disable-next-line: no-console
+                    console.error(
+                        `Failed to load Widget Script from Extension for for ${moduleName}, ${moduleVersion}`,
+                        ex
+                    )
+                )
+        );
+    }
+    private handleLoadSuccess(className: string, moduleName: string, moduleVersion: string) {
+        if (!this.props.postOffice.onWidgetLoadSuccess) {
+            return;
+        }
+        this.props.postOffice.onWidgetLoadSuccess({
+            className,
+            moduleName,
+            moduleVersion
+        });
+    }
+}
+
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 // tslint:disable-next-line: no-any
-export function initialize(api: NotebookRendererApi<any>) {
+function initialize(api: NotebookRendererApi<any>) {
     // Possible this (pre-render script loaded after notebook attempted to render something).
     // At this point we need to go and render the existing output.
     initWidgets(api);
@@ -59,7 +329,7 @@ function renderOutput(request: NotebookOutputEventParams) {
     // postToRendererExtension('Hello', 'World');
     // postToKernel('HelloKernel', 'WorldKernel');
 }
-export function renderIPyWidget(
+function renderIPyWidget(
     outputId: string,
     model: nbformat.IMimeBundle & { model_id: string; version_major: number },
     container: HTMLElement
@@ -83,14 +353,14 @@ export function renderIPyWidget(
         })
         .catch((ex) => console.error('Failed to render', ex));
 }
-export function destroyIPyWidget(ele: HTMLElement) {
-    if (!outputDisposables2.has(ele)) {
-        return;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    outputDisposables2.get(ele)!.dispose();
-    outputDisposables2.delete(ele);
-}
+// function destroyIPyWidget(ele: HTMLElement) {
+//     if (!outputDisposables2.has(ele)) {
+//         return;
+//     }
+//     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+//     outputDisposables2.get(ele)!.dispose();
+//     outputDisposables2.delete(ele);
+// }
 // /**
 //  * Possible the pre-render scripts load late, after we have attempted to render output from notebook.
 //  * At this point look through all such scripts and render the output.
@@ -191,10 +461,10 @@ class MyPostOffice implements IPyWidgetsPostOffice {
     }
 }
 
-let widgetManagerPromise: Promise<WidgetManager> | undefined;
-async function getWidgetManager(): Promise<WidgetManager> {
+let widgetManagerPromise: Promise<IIPyWidgetManager> | undefined;
+async function getWidgetManager(): Promise<IIPyWidgetManager> {
     if (!widgetManagerPromise) {
-        widgetManagerPromise = new Promise((resolve) => WidgetManager.instance.subscribe(resolve));
+        widgetManagerPromise = new Promise((resolve) => getInstance().subscribe(resolve));
         widgetManagerPromise
             .then((wm) => {
                 if (wm) {
@@ -284,3 +554,6 @@ function convertVSCodeOutputToExecutResultOrDisplayData(
         output_type: request.output.metadata?.custom?.vscode?.outputType || 'execute_result'
     };
 }
+
+
+initialize(acquireNotebookRendererApi(JupyterIPyWidgetNotebookRenderer));

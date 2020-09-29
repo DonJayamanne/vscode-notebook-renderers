@@ -259,7 +259,7 @@ class ProxyKernel implements Kernel.IKernel {
             case IPyWidgetMessages.IPyWidgets_binary_msg:
             case IPyWidgetMessages.IPyWidgets_mirror_execute:
             case IPyWidgetMessages.IPyWidgets_ExtensionOperationHandled:
-                console.debug(`handleMessage inside kernel ${type}`, payload);
+                // console.debug(`handleMessage inside kernel ${type}`, payload);
                 break;
             default:
                 break;

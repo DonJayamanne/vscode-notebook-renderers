@@ -7,10 +7,10 @@ import * as isonline from 'is-online';
 import * as React from 'react';
 import { createDeferred, Deferred } from './misc/async';
 // import '../../client/common/extensions';
-import { warnAboutWidgetVersionsThatAreNotSupported } from './incompatibleWidgetHandler';
-import { WidgetManager } from './manager';
+// import { warnAboutWidgetVersionsThatAreNotSupported } from './incompatibleWidgetHandler';
+import { createManager } from './manager';
 import { registerScripts } from './requirejsRegistry';
-import { SharedMessages, WidgetScriptSource, IPyWidgetMessages, IPyWidgetsPostOffice } from './types';
+import { SharedMessages, WidgetScriptSource, IPyWidgetMessages, IPyWidgetsPostOffice, IIPyWidgetManager } from './types';
 
 type Props = {
     postOffice: IPyWidgetsPostOffice;
@@ -18,7 +18,7 @@ type Props = {
 };
 
 export class WidgetManagerComponent extends React.Component<Props> {
-    private readonly widgetManager: WidgetManager;
+    private readonly widgetManager: IIPyWidgetManager;
     private readonly widgetSourceRequests = new Map<
         string,
         { deferred: Deferred<void>; timer?: NodeJS.Timeout | number }
@@ -47,7 +47,8 @@ export class WidgetManagerComponent extends React.Component<Props> {
             typeof this.props.widgetContainerElement === 'string'
                 ? document.getElementById(this.props.widgetContainerElement)
                 : this.props.widgetContainerElement;
-        this.widgetManager = new WidgetManager(ele, this.props.postOffice, this.loaderSettings);
+        // this.widgetManager = new WidgetManager(ele, this.props.postOffice, this.loaderSettings);
+        this.widgetManager = createManager(ele, this.props.postOffice, this.loaderSettings);
 
         props.postOffice.onDidReceiveKernelMessage((msg) => {
             // tslint:disable-next-line: no-any
@@ -157,7 +158,10 @@ export class WidgetManagerComponent extends React.Component<Props> {
         // tslint:disable-next-line: no-console
         console.log(`Fetch IPyWidget source for ${moduleName}`);
         let request = this.widgetSourceRequests.get(moduleName);
-        if (!request) {
+        if (request) {
+            console.error(`Re-use loading module ${moduleName}`);
+        } else {
+            console.error(`Start loading module ${moduleName}`);
             request = {
                 deferred: createDeferred<void>(),
                 timer: undefined
@@ -192,39 +196,40 @@ export class WidgetManagerComponent extends React.Component<Props> {
             }, timeoutTime);
 
             this.widgetSourceRequests.set(moduleName, request);
+
+            // Whether we have the scripts or not, send message to extension.
+            // Useful telemetry and also we know it was explicity requested by ipywidgets.
+            this.props.postOffice
+                .getWidgetScriptSource({
+                    moduleName,
+                    moduleVersion
+                })
+                .then((result) => this.registerScriptSourceInRequirejs(result))
+                // tslint:disable-next-line: no-console
+                .catch((ex) => console.error(`Failed to fetch scripts for ${moduleName}, ${moduleVersion}`, ex));
         }
-        // Whether we have the scripts or not, send message to extension.
-        // Useful telemetry and also we know it was explicity requested by ipywidgets.
-        this.props.postOffice
-            .getWidgetScriptSource({
-                moduleName,
-                moduleVersion
-            })
-            .then((result) => this.registerScriptSourceInRequirejs(result))
-            // tslint:disable-next-line: no-console
-            .catch((ex) => console.error(`Failed to fetch scripts for ${moduleName}, ${moduleVersion}`, ex));
 
         return (
             request.deferred.promise
                 .then(() => {
                     // tslint:disable-next-line: no-console
-                    console.error('Attempting to load module');
-                    const widgetSource = this.registeredWidgetSources.get(moduleName);
-                    if (widgetSource) {
-                        warnAboutWidgetVersionsThatAreNotSupported(
-                            widgetSource,
-                            moduleVersion,
-                            this.widgetsCanLoadFromCDN,
-                            (info) => {
-                                if (this.props.postOffice.onWidgetVersionNotSupported) {
-                                    this.props.postOffice.onWidgetVersionNotSupported({
-                                        moduleName: info.moduleName,
-                                        moduleVersion: info.moduleVersion
-                                    });
-                                }
-                            }
-                        );
-                    }
+                    console.error(`Attempting to load module ${moduleName}`);
+                    // const widgetSource = this.registeredWidgetSources.get(moduleName);
+                    // if (widgetSource) {
+                    //     warnAboutWidgetVersionsThatAreNotSupported(
+                    //         widgetSource,
+                    //         moduleVersion,
+                    //         this.widgetsCanLoadFromCDN,
+                    //         (info) => {
+                    //             if (this.props.postOffice.onWidgetVersionNotSupported) {
+                    //                 this.props.postOffice.onWidgetVersionNotSupported({
+                    //                     moduleName: info.moduleName,
+                    //                     moduleVersion: info.moduleVersion
+                    //                 });
+                    //             }
+                    //         }
+                    //     );
+                    // }
                 })
                 // tslint:disable-next-line: no-any
                 .catch((ex: any) =>

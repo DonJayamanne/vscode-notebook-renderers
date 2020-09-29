@@ -40,6 +40,7 @@ export class JupyterlabWidgetManager extends jupyterlab.WidgetManager {
             }),
             { saveState: false }
         );
+        console.error('Load Widget manager');
         this.kernel = kernel;
         this.el = el;
         this.rendermime.addFactory(
@@ -52,6 +53,7 @@ export class JupyterlabWidgetManager extends jupyterlab.WidgetManager {
         );
 
         kernel.registerCommTarget(this.comm_target_name, async (comm, msg) => {
+            console.error(`Register Comm Target ${this.comm_target_name}`);
             const oldComm = new shims.services.Comm(comm);
             return this.handle_comm_open(oldComm, msg) as Promise<any>;
         });

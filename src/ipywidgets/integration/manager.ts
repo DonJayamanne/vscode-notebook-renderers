@@ -22,10 +22,23 @@ import { JupyterlabWidgetManager } from '../base/manager';
 const noop = () => {};
 export const WIDGET_MIMETYPE = 'application/vnd.jupyter.widget-view+json';
 
+
+export function createManager(a: any, b: any, c: any){
+    return new WidgetManager(a,b,c);
+}
+export function getInstance(){
+    return WidgetManager.instance
+}
 // tslint:disable: no-any
 
-export class WidgetManager implements IIPyWidgetManager {
+class WidgetManager implements IIPyWidgetManager {
     public static get instance(): Observable<WidgetManager | undefined> {
+        if ((WidgetManager._instance as any).x = '1'){
+            console.error('Same');
+        } else {
+            (WidgetManager._instance as any).x = '1';
+            console.error('Different');
+        }
         return WidgetManager._instance;
     }
     private static _instance = new ReplaySubject<WidgetManager | undefined>();
