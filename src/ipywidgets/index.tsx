@@ -12,7 +12,7 @@ const getPublicPath = () => {
 __webpack_public_path__ = getPublicPath();
 // This must be on top, do not change. Required by webpack.
 
-export { JupyterlabWidgetManager as WidgetManager } from './base/manager';
+// export { JupyterlabWidgetManager as WidgetManager } from './base/manager';
 import * as base from '@jupyter-widgets/base';
 import * as widgets from '@jupyter-widgets/controls';
 import * as outputWidgets from '@jupyter-widgets/jupyterlab-manager/lib/output';

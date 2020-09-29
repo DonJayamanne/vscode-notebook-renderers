@@ -45,7 +45,7 @@ function renderOutput(request: NotebookOutputEventParams) {
         console.error('request output', output);
 
         // tslint:disable-next-line: no-any
-        const model = output['application/vnd.jupyter.widget-view+json'] as any;
+        const model = output.data['application/vnd.jupyter.widget-view+json'] as any;
         if (!model) {
             // tslint:disable-next-line: no-console
             return console.error('Nothing to render');
@@ -123,12 +123,11 @@ class MyPostOffice implements IPyWidgetsPostOffice {
             // For testing, we might use a  browser to load  the stuff.
             // In such instances the `acquireVSCodeApi` will return the event handler to get messages from extension.
             // See ./src/datascience-ui/native-editor/index.html
-            // tslint:disable-next-line: no-any
-            // const api = (vscApi as any) as { handleMessage?: Function };
-            api.onDidReceiveMessage(this.onMessage.bind(this));
-        } catch {
+            window.addEventListener('message', this.onMessage.bind(this));
+            // api.onDidReceiveMessage(this.onMessage.bind(this));
+        } catch (ex) {
             // Ignore.
-            console.error('Oops in ctor of MyPostOffice');
+            console.error('Oops in ctor of MyPostOffice', ex);
         }
 
         // window.addEventListener('message', this.onMessage.bind(this));
@@ -139,8 +138,11 @@ class MyPostOffice implements IPyWidgetsPostOffice {
     }
 
     private onMessage(e: MessageEvent) {
+        // console.error(`Got Message in PostOffice`);
         // tslint:disable
         const type: string | undefined = e.data.type ?? e.data.message;
+        // console.error(`Got Message in PostOffice type = ${type}`);
+        // console.error(`Got Message in PostOffice payload = ${e.data.payload}`);
         if (e.data && type) {
             // tslint:disable-next-line: no-console
             // console.error('processing messages', e.data);
@@ -233,10 +235,10 @@ function initWidgets(api: NotebookRendererApi<any>) {
         }
     });
     api.postMessage('Loaded');
-    api.onDidReceiveMessage((msg) => {
-        // tslint:disable-next-line: no-console
-        console.error(`Message from renderer`, msg);
-    });
+    // api.onDidReceiveMessage((msg) => {
+    //     // tslint:disable-next-line: no-console
+    //     console.error(`Message from renderer`, msg);
+    // });
 
     // tslint:disable-next-line: no-console
     console.error('Rendering widget container');

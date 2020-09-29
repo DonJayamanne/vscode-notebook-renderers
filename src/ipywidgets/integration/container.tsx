@@ -25,7 +25,7 @@ export class WidgetManagerComponent extends React.Component<Props> {
     >();
     private readonly registeredWidgetSources = new Map<string, WidgetScriptSource>();
     private timedOutWaitingForWidgetsToGetLoaded?: boolean;
-    private widgetsCanLoadFromCDN = false;
+    private widgetsCanLoadFromCDN = true; // Temporary.
     private readonly loaderSettings = {
         // Total time to wait for a script to load. This includes ipywidgets making a request to extension for a Uri of a widget,
         // then extension replying back with the Uri (max 5 seconds round trip time).
