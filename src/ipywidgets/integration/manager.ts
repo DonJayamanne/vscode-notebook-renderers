@@ -22,28 +22,40 @@ import { JupyterlabWidgetManager } from '../base/manager';
 const noop = () => {};
 export const WIDGET_MIMETYPE = 'application/vnd.jupyter.widget-view+json';
 
+import { JUPYTER_CONTROLS_VERSION } from '@jupyter-widgets/controls/lib/version';
+import * as base from '@jupyter-widgets/base';
+import * as widgets from '@jupyter-widgets/controls';
+import * as outputWidgets from '@jupyter-widgets/jupyterlab-manager/lib/output';
+// import './widgets.css';
 
-export function createManager(a: any, b: any, c: any){
-    return new WidgetManager(a,b,c);
+// Export the following for `requirejs`.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, no-empty, @typescript-eslint/no-empty-function
+// const define = (window as any).define || function () {};
+// define('@jupyter-widgets/controls', () => widgets);
+// define('@jupyter-widgets/base', () => base);
+// define('@jupyter-widgets/output', () => outputWidgets);
+
+export function createManager(a: any, b: any, c: any) {
+    return new WidgetManager(a, b, c);
 }
-export function getInstance(){
-    return WidgetManager.instance
+export function getInstance() {
+    return WidgetManager.instance;
 }
 // tslint:disable: no-any
 
 class WidgetManager implements IIPyWidgetManager {
     public static get instance(): Observable<WidgetManager | undefined> {
-        if ((WidgetManager._instance as any).x = '1'){
-            console.error('Same');
-        } else {
-            (WidgetManager._instance as any).x = '1';
-            console.error('Different');
-        }
+        // if (((WidgetManager._instance as any).x = '1')) {
+        //     console.error('Same');
+        // } else {
+        //     (WidgetManager._instance as any).x = '1';
+        //     console.error('Different');
+        // }
         return WidgetManager._instance;
     }
     private static _instance = new ReplaySubject<WidgetManager | undefined>();
     private manager?: JupyterlabWidgetManager;
-    private proxyKernel?: Kernel.IKernel;
+    public proxyKernel?: Kernel.IKernel;
     private options?: KernelSocketOptions;
     private pendingMessages: { message: string; payload: any }[] = [];
     /**
@@ -57,6 +69,7 @@ class WidgetManager implements IIPyWidgetManager {
      */
     private modelIdsToBeDisplayed = new Map<string, Deferred<void>>();
     private disposables: IDisposable[] = [];
+    private wait = Promise.resolve();
     constructor(
         private readonly widgetContainer: HTMLElement,
         private readonly postOffice: IPyWidgetsPostOffice,
@@ -69,7 +82,7 @@ class WidgetManager implements IIPyWidgetManager {
         }
     ) {
         // tslint:disable-next-line: no-console
-        console.error('Bound');
+        // console.error('Bound');
         // tslint:disable-next-line: no-any
         this.postOffice.onDidReceiveKernelMessage(this.handleMessage, this, this.disposables);
 
@@ -85,7 +98,8 @@ class WidgetManager implements IIPyWidgetManager {
     public async clear(): Promise<void> {
         await this.manager?.clear_state();
     }
-    public handleMessage(msg: { type: string; payload?: any }) {
+    public async handleMessage(msg: { type: string; payload?: any }) {
+        await this.wait;
         // tslint:disable-next-line: no-console
         // console.error('handleMessage in manager.ts', msg);
         const { type, payload } = msg;
@@ -117,6 +131,7 @@ class WidgetManager implements IIPyWidgetManager {
         data: nbformat.IMimeBundle & { model_id: string; version_major: number },
         ele: HTMLElement
     ): Promise<Widget | undefined> {
+        console.error('WidgetManager.renderWidget');
         if (!data) {
             throw new Error(
                 "application/vnd.jupyter.widget-view+json not in msg.content.data, as msg.content.data is 'undefined'."
@@ -157,13 +172,15 @@ class WidgetManager implements IIPyWidgetManager {
         try {
             // tslint:disable: no-console
             console.log('Render Widget in manager1.ts');
-            await sleep(1_000);
+            await sleep(5_000);
             const model = await modelPromise;
             console.log('Render Widget in manager2.ts');
             const view = await this.manager.create_view(model, { el: ele });
             console.log('Render Widget in manager2.ts');
             // tslint:disable-next-line: no-any
-            return this.manager.display_view(data, view, { node: ele });
+            const widget = await this.manager.display_view(data, view, { node: ele });
+            console.log('Finished Render Widget in manager2.ts');
+            return widget;
         } catch (ex) {
             // tslint:disable-next-line: no-console
             console.error('Kaboom', ex);
@@ -185,6 +202,34 @@ class WidgetManager implements IIPyWidgetManager {
             // tslint:disable-next-line: no-any
             // Create the real manager and point it at our proxy kernel.
             this.manager = new JupyterlabWidgetManager(this.proxyKernel, this.widgetContainer, this.scriptLoader);
+            //             define('@jupyter-widgets/controls', () => widgets);
+            // define('@jupyter-widgets/base', () => base);
+            // define('@jupyter-widgets/output', () => outputWidgets);
+            // const WIDGET_REGISTRY = [];
+            this.manager.register({
+                name: '@jupyter-widgets/base',
+                version: '1.2.0',
+                exports: {
+                    WidgetModel: base.WidgetModel,
+                    WidgetView: base.WidgetView,
+                    DOMWidgetView: base.DOMWidgetView,
+                    DOMWidgetModel: base.DOMWidgetModel,
+                    LayoutModel: base.LayoutModel,
+                    LayoutView: base.LayoutView,
+                    StyleModel: base.StyleModel,
+                    StyleView: base.StyleView
+                }
+            });
+            this.manager.register({
+                name: '@jupyter-widgets/controls',
+                version: JUPYTER_CONTROLS_VERSION,
+                exports: widgets as any
+            });
+            this.manager.register({
+                name: '@jupyter-widgets/output',
+                version: '1.0.0',
+                exports: outputWidgets as any
+            });
 
             // Listen for display data messages so we can prime the model for a display data
             this.proxyKernel.iopubMessage.connect(this.handleDisplayDataMessage.bind(this));

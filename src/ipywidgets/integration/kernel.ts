@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
@@ -79,6 +80,7 @@ class ProxyKernel implements Kernel.IKernel {
     private lastHookedMessageId: string | undefined;
     // Messages that are awaiting extension messages to be fully handled
     private awaitingExtensionMessage: Map<string, Deferred<void>>;
+    private wait: Promise<unknown> = Promise.resolve();
     constructor(options: KernelSocketOptions, private postOffice: IPyWidgetsPostOffice) {
         class ProxyWebSocket {
             // Dummy websocket we give to the underlying real kernel
@@ -132,7 +134,7 @@ class ProxyKernel implements Kernel.IKernel {
         this._ioPubMessageSignal = new signaling.Signal<this, KernelMessage.IIOPubMessage>(this);
         this.realKernel.iopubMessage.connect(this.onIOPubMessage, this);
         // tslint:disable-next-line: no-console
-        console.error('Hook up Receive Kernel Message');
+        // console.error('Hook up Receive Kernel Message');
         postOffice.onDidReceiveKernelMessage(this.handleMessage, this, this.disposables);
         this.websocket = (ProxyWebSocket.instance as unknown) as WebSocketWS & { sendEnabled: boolean };
         this.messageHook = this.messageHookInterceptor.bind(this);
@@ -251,7 +253,10 @@ class ProxyKernel implements Kernel.IKernel {
         this.disposables.forEach((d) => d.dispose());
         return this.realKernel.dispose();
     }
-    public handleMessage({ type, payload }: { type: string; payload?: any }): boolean {
+    public handleMessage(data: any) {
+        this.wait = this.wait.then(() => this.handleMessageInternal(data));
+    }
+    public async handleMessageInternal({ type, payload }: { type: string; payload?: any }) {
         // tslint:disable: no-console
         switch (type) {
             case IPyWidgetMessages.IPyWidgets_MessageHookCall:
@@ -269,10 +274,12 @@ class ProxyKernel implements Kernel.IKernel {
         // If not, we could switch to message chaining or an observable instead.
         switch (type) {
             case IPyWidgetMessages.IPyWidgets_MessageHookCall:
+                console.error(`Message received ${type}`);
                 this.sendHookResult(payload);
                 break;
 
             case IPyWidgetMessages.IPyWidgets_msg:
+                console.error(`Message received ${type}`);
                 if (this.websocket && this.websocket.onmessage) {
                     this.websocket.onmessage({ target: this.websocket, data: payload.data, type: '' });
                 } else {
@@ -282,6 +289,7 @@ class ProxyKernel implements Kernel.IKernel {
                 break;
 
             case IPyWidgetMessages.IPyWidgets_binary_msg:
+                console.error(`Message received ${type}`);
                 if (this.websocket && this.websocket.onmessage) {
                     console.error('Binary message deserialized');
                     const deserialized = deserializeDataViews(payload.data)![0];
@@ -293,10 +301,12 @@ class ProxyKernel implements Kernel.IKernel {
                 break;
 
             case IPyWidgetMessages.IPyWidgets_mirror_execute:
+                console.error(`Message received ${type}`);
                 this.handleMirrorExecute(payload);
                 break;
 
             case IPyWidgetMessages.IPyWidgets_ExtensionOperationHandled:
+                console.error(`Message received ${type}`);
                 this.extensionOperationFinished(payload);
                 break;
 
@@ -518,6 +528,6 @@ export function create(
 ): Kernel.IKernel {
     const result = new ProxyKernel(options, postOffice);
     // Make sure to handle all the missed messages
-    pendingMessages.forEach((m) => result.handleMessage({ type: m.message, payload: m.payload }));
+    pendingMessages.map((m) => result.handleMessage({ type: m.message, payload: m.payload }));
     return result;
 }

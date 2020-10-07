@@ -3,7 +3,7 @@
 
 'use strict';
 
-const cache:any = {};
+// const cache:any = {};
 // tslint:disable-next-line: no-any
 async function requirePromise(pkg: string | string[]): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -12,19 +12,23 @@ async function requirePromise(pkg: string | string[]): Promise<any> {
         if (requirejs === undefined) {
             reject('Requirejs is needed, please ensure it is loaded on the page.');
         } else {
-            console.error(`load ${pkg[0]}`);
+            // console.error(`load ${pkg[0]}`);
             // requirejs(pkg, resolve, reject);
 
-            if (cache[pkg[0]] && pkg[0] === 'k3d'){
-                console.error('k3d found');
-                return resolve.apply({}, cache[pkg[0]] as any);
-            }
-            requirejs(pkg, function(){
-                if (pkg[0] === 'k3d'){
-                    cache[pkg[0]] = arguments;
-                }
-                resolve.apply({}, arguments);
-            }, reject);
+            // if (cache[pkg[0]] && pkg[0] === 'k3d'){
+            //     // console.error('k3d found');
+            //     return resolve.apply({}, cache[pkg[0]] as any);
+            // }
+            requirejs(
+                pkg,
+                function () {
+                    // if (pkg[0] === 'k3d'){
+                    //     cache[pkg[0]] = arguments;
+                    // }
+                    resolve.apply({}, arguments);
+                },
+                reject
+            );
         }
     });
 }

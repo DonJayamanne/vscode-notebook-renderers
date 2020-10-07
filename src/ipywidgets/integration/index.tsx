@@ -18,7 +18,7 @@ import * as widgets from '@jupyter-widgets/controls';
 import * as outputWidgets from '@jupyter-widgets/jupyterlab-manager/lib/output';
 import './widgets.css';
 
-// Export the following for `requirejs`.
+// // Export the following for `requirejs`.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any, no-empty, @typescript-eslint/no-empty-function
 const define = (window as any).define || function () {};
 define('@jupyter-widgets/controls', () => widgets);
@@ -29,40 +29,46 @@ define('@jupyter-widgets/output', () => outputWidgets);
 const JupyterIPyWidgetNotebookRenderer = 'jupyter-ipywidget-renderer';
 // initialize(acquireNotebookRendererApi(JupyterIPyWidgetNotebookRenderer));
 
-
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-'use strict';
+('use strict');
 
 import type { nbformat } from '@jupyterlab/coreutils';
-import * as React from 'react';
-import * as ReactDOM from 'react-dom';
+// import * as React from 'react';
+// import * as ReactDOM from 'react-dom';
 import { createDeferred, Deferred } from './misc/async';
 // import { WidgetManagerComponent } from './container';
 import { createEmitter } from './events';
-import { IPyWidgetMessages, WidgetScriptSource, Event, IPyWidgetsPostOffice, IPyWidgetsSettings, IIPyWidgetManager } from './types';
+import {
+    IPyWidgetMessages,
+    WidgetScriptSource,
+    Event,
+    IPyWidgetsPostOffice,
+    IPyWidgetsSettings,
+    IIPyWidgetManager
+} from './types';
 import type { NotebookOutputEventParams, NotebookRendererApi } from 'vscode-notebook-renderer';
 import { getInstance } from './manager';
 
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-'use strict';
+('use strict');
 
 import * as isonline from 'is-online';
 // import '../../client/common/extensions';
 // import { warnAboutWidgetVersionsThatAreNotSupported } from './incompatibleWidgetHandler';
 import { createManager } from './manager';
 import { registerScripts } from './requirejsRegistry';
-import { SharedMessages,  } from './types';
+import { SharedMessages } from './types';
 
 type Props = {
     postOffice: IPyWidgetsPostOffice;
-    widgetContainerElement: string | HTMLElement;
+    // widgetContainerElement?: string | HTMLElement;
 };
 
-class WidgetManagerComponent extends React.Component<Props> {
+class WidgetManagerComponent {
     private readonly widgetManager: IIPyWidgetManager;
     private readonly widgetSourceRequests = new Map<
         string,
@@ -86,14 +92,14 @@ class WidgetManagerComponent extends React.Component<Props> {
         loadWidgetScript: this.loadWidgetScript.bind(this),
         successHandler: this.handleLoadSuccess.bind(this)
     };
-    constructor(props: Props) {
-        super(props);
-        const ele =
-            typeof this.props.widgetContainerElement === 'string'
-                ? document.getElementById(this.props.widgetContainerElement)
-                : this.props.widgetContainerElement;
+    constructor(private readonly props: Props) {
+        // super(props);
+        // const ele =
+        //     typeof this.props.widgetContainerElement === 'string'
+        //         ? document.getElementById(this.props.widgetContainerElement)
+        //         : this.props.widgetContainerElement;
         // this.widgetManager = new WidgetManager(ele, this.props.postOffice, this.loaderSettings);
-        this.widgetManager = createManager(ele, this.props.postOffice, this.loaderSettings);
+        this.widgetManager = createManager(null, this.props.postOffice, this.loaderSettings);
 
         props.postOffice.onDidReceiveKernelMessage((msg) => {
             // tslint:disable-next-line: no-any
@@ -282,7 +288,6 @@ class WidgetManagerComponent extends React.Component<Props> {
     }
 }
 
-
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 // tslint:disable-next-line: no-any
@@ -309,10 +314,10 @@ const renderedWidgets = new Set<string>();
  */
 function renderOutput(request: NotebookOutputEventParams) {
     try {
-        console.error('request', request);
+        // console.error('request', request);
         const output = convertVSCodeOutputToExecutResultOrDisplayData(request);
-        console.log(`Rendering mimeType ${request.mimeType}`, output);
-        console.error('request output', output);
+        // console.log(`Rendering mimeType ${request.mimeType}`, output);
+        // console.error('request output', output);
 
         // tslint:disable-next-line: no-any
         const model = output.data['application/vnd.jupyter.widget-view+json'] as any;
@@ -335,12 +340,18 @@ function renderIPyWidget(
     container: HTMLElement
 ) {
     // tslint:disable: no-console
-    console.error('Got Something to render');
+    // console.error('Got Something to render');
     if (renderedWidgets.has(model.model_id)) {
         return console.error('already rendering');
     }
+    const output = document.createElement('div');
+    output.className = 'cell-output cell-output';
+    const ele = document.createElement('div');
+    ele.className = 'cell-output-ipywidget-background';
+    container.appendChild(ele);
+    ele.appendChild(output);
     renderedWidgets.add(model.model_id);
-    createWidgetView(model, container)
+    createWidgetView(model, ele)
         .then((w) => {
             const disposable = {
                 dispose: () => {
@@ -349,7 +360,7 @@ function renderIPyWidget(
                 }
             };
             outputDisposables.set(outputId, disposable);
-            outputDisposables2.set(container, disposable);
+            outputDisposables2.set(ele, disposable);
         })
         .catch((ex) => console.error('Failed to render', ex));
 }
@@ -441,6 +452,7 @@ class MyPostOffice implements IPyWidgetsPostOffice {
     }
     // tslint:disable-next-line: no-any
     public postKernelMessage(message: any, payload: any): void {
+        console.error(`Message sent ${message}`);
         this.backendReady.promise.then(() => this.postToKernel(message, payload)).catch(noop);
     }
     public async getWidgetScriptSource(options: {
@@ -511,21 +523,20 @@ function initWidgets(api: NotebookRendererApi<any>) {
     // });
 
     // tslint:disable-next-line: no-console
-    console.error('Rendering widget container');
+    // console.error('Rendering widget container');
     try {
         const postOffice: IPyWidgetsPostOffice = new MyPostOffice(api);
-        const container = document.createElement('div');
-        document.body.appendChild(container);
-        ReactDOM.render(
-            React.createElement(WidgetManagerComponent, { postOffice, widgetContainerElement: container }, null),
-            container
-        );
+        // const container = undefined as any; //document.createElement('div');
+        // document.body.appendChild(container);
+        const mgr = new WidgetManagerComponent({ postOffice });
+        (window as any)._mgr = mgr;
     } catch (ex) {
         // tslint:disable-next-line: no-console
         console.error('Ooops', ex);
     }
 }
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(window as any)._mgr = undefined;
 function convertVSCodeOutputToExecutResultOrDisplayData(
     request: NotebookOutputEventParams
 ): nbformat.IExecuteResult | nbformat.IDisplayData {
@@ -554,6 +565,5 @@ function convertVSCodeOutputToExecutResultOrDisplayData(
         output_type: request.output.metadata?.custom?.vscode?.outputType || 'execute_result'
     };
 }
-
 
 initialize(acquireNotebookRendererApi(JupyterIPyWidgetNotebookRenderer));

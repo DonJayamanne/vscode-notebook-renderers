@@ -40,7 +40,7 @@ export class JupyterlabWidgetManager extends jupyterlab.WidgetManager {
             }),
             { saveState: false }
         );
-        console.error('Load Widget manager');
+        console.log('Load Widget manager');
         this.kernel = kernel;
         this.el = el;
         this.rendermime.addFactory(
