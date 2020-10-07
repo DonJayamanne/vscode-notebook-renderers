@@ -12,7 +12,7 @@ import fastDeepEqual from 'fast-deep-equal';
 import 'rxjs/add/operator/concatMap';
 import { Observable } from 'rxjs/Observable';
 import { ReplaySubject } from 'rxjs/ReplaySubject';
-import { createDeferred, Deferred, sleep } from './misc/async';
+import { createDeferred, Deferred } from './misc/async';
 import { IPyWidgetMessages } from './types';
 import { create as createKernel } from './kernel';
 import { IDisposable, IIPyWidgetManager, IPyWidgetsPostOffice, KernelSocketOptions } from './types';
