@@ -172,7 +172,7 @@ class WidgetManager implements IIPyWidgetManager {
         try {
             // tslint:disable: no-console
             console.log('Render Widget in manager1.ts');
-            await sleep(5_000);
+            // await sleep(5_000);
             const model = await modelPromise;
             console.log('Render Widget in manager2.ts');
             const view = await this.manager.create_view(model, { el: ele });
