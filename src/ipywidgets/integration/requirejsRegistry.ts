@@ -29,13 +29,11 @@ function getScriptsWithAValidScriptUriToBeRegistered(scripts: WidgetScriptSource
     return scripts
         .filter((source) => {
             if (source.scriptUri) {
-                // tslint:disable-next-line: no-console
                 console.log(
                     `Source for IPyWidget ${source.moduleName} found in ${source.source} @ ${source.scriptUri}.`
                 );
                 return true;
             } else {
-                // tslint:disable-next-line: no-console
                 console.error(`Source for IPyWidget ${source.moduleName} not found.`);
                 return false;
             }
@@ -44,8 +42,7 @@ function getScriptsWithAValidScriptUriToBeRegistered(scripts: WidgetScriptSource
 }
 
 function registerScriptsInRequireJs(scripts: NonPartial<WidgetScriptSource>[]) {
-    // tslint:disable: no-console
-    // tslint:disable-next-line: no-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/ban-types
     const requirejs = (window as any).require as { config: Function };
     if (!requirejs) {
         window.console.error('Requirejs not found');
@@ -64,12 +61,7 @@ function registerScriptsInRequireJs(scripts: NonPartial<WidgetScriptSource>[]) {
         // Register the script source into requirejs so it gets loaded via requirejs.
         config.paths[script.moduleName] = scriptUri;
     });
-    // tslint:disable-next-line: no-console
-    // console.error(`requirejs.config`, typeof requirejs.config);
-    // // tslint:disable-next-line: no-console
-    // console.error(`requirejs.config`, JSON.stringify(config));
     requirejs.config(config);
-    // console.trace(`requirejs.config registered`);
 }
 
 export function registerScripts(scripts: WidgetScriptSource[]) {

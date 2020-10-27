@@ -1,8 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-'use strict';
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { shims } from '@jupyter-widgets/base';
 import * as jupyterlab from '@jupyter-widgets/jupyterlab-manager';
 import { RenderMimeRegistry, standardRendererFactories } from '@jupyterlab/rendermime';
@@ -13,7 +12,6 @@ import { requireLoader } from './widgetLoader';
 
 export const WIDGET_MIMETYPE = 'application/vnd.jupyter.widget-view+json';
 
-// tslint:disable: no-any
 // Source borrowed from https://github.com/jupyter-widgets/ipywidgets/blob/master/examples/web3/src/manager.ts
 
 // These widgets can always be loaded from requirejs (as it is bundled).
@@ -65,7 +63,9 @@ export class JupyterlabWidgetManager extends jupyterlab.WidgetManager {
     public async _create_comm(
         target_name: string,
         model_id: string,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         data?: any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         metadata?: any
     ): Promise<shims.services.Comm> {
         const comm = this.kernel.connectToComm(target_name, model_id);
@@ -97,6 +97,7 @@ export class JupyterlabWidgetManager extends jupyterlab.WidgetManager {
         // This throws errors if enabled, can be added later.
     }
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore https://devblogs.microsoft.com/typescript/announcing-typescript-4-0-rc/#properties-overridding-accessors-and-vice-versa-is-an-error
     public get onUnhandledIOPubMessage() {
         return super.onUnhandledIOPubMessage;

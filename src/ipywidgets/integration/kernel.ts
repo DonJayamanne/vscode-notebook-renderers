@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Kernel, KernelMessage, ServerConnection } from '@jupyterlab/services';
+import type { Kernel, KernelMessage, ServerConnection } from '@jupyterlab/services';
 import { DefaultKernel } from '@jupyterlab/services/lib/kernel/default';
 import type { ISignal, Signal } from '@phosphor/signaling';
 import * as WebSocketWS from 'ws';

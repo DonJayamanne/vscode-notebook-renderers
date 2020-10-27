@@ -45,18 +45,13 @@ export function getInstance() {
 
 class WidgetManager implements IIPyWidgetManager {
     public static get instance(): Observable<WidgetManager | undefined> {
-        // if (((WidgetManager._instance as any).x = '1')) {
-        //     console.error('Same');
-        // } else {
-        //     (WidgetManager._instance as any).x = '1';
-        //     console.error('Different');
-        // }
         return WidgetManager._instance;
     }
     private static _instance = new ReplaySubject<WidgetManager | undefined>();
     private manager?: JupyterlabWidgetManager;
     public proxyKernel?: Kernel.IKernel;
     private options?: KernelSocketOptions;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private pendingMessages: { message: string; payload: any }[] = [];
     /**
      * Contains promises related to model_ids that need to be displayed.
@@ -75,15 +70,12 @@ class WidgetManager implements IIPyWidgetManager {
         private readonly postOffice: IPyWidgetsPostOffice,
         private readonly scriptLoader: {
             readonly widgetsRegisteredInRequireJs: Readonly<Set<string>>;
-            // tslint:disable-next-line: no-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             errorHandler(className: string, moduleName: string, moduleVersion: string, error: any): void;
             loadWidgetScript(moduleName: string, moduleVersion: string): Promise<void>;
             successHandler(className: string, moduleName: string, moduleVersion: string): void;
         }
     ) {
-        // tslint:disable-next-line: no-console
-        // console.error('Bound');
-        // tslint:disable-next-line: no-any
         this.postOffice.onDidReceiveKernelMessage(this.handleMessage, this, this.disposables);
 
         // Handshake.
@@ -98,6 +90,7 @@ class WidgetManager implements IIPyWidgetManager {
     public async clear(): Promise<void> {
         await this.manager?.clear_state();
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public async handleMessage(msg: { type: string; payload?: any }) {
         await this.wait;
         // tslint:disable-next-line: no-console

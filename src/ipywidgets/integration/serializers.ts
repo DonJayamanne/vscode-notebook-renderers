@@ -1,3 +1,4 @@
+/* eslint-disable prefer-spread */
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
@@ -14,28 +15,28 @@ export function serializeDataViews(buffers: undefined | (ArrayBuffer | ArrayBuff
     if (!buffers || !Array.isArray(buffers) || buffers.length === 0) {
         return;
     }
-    // tslint:disable-next-line: no-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const newBufferView: any[] = [];
     // tslint:disable-next-line: prefer-for-of
     for (let i = 0; i < buffers.length; i += 1) {
         const item = buffers[i];
         if ('buffer' in item && 'byteOffset' in item) {
             // It is an ArrayBufferView
-            // tslint:disable-next-line: no-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const buffer = Array.apply(null, new Uint8Array(item.buffer as any) as any);
             newBufferView.push({
                 ...item,
                 byteLength: item.byteLength,
                 byteOffset: item.byteOffset,
                 buffer
-                // tslint:disable-next-line: no-any
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any);
         } else {
             // Do not use `Array.apply`, it will not work for large arrays.
             // Nodejs will throw `stackoverflow` exceptions.
             // Else following ipynb fails https://github.com/K3D-tools/K3D-jupyter/blob/821a59ed88579afaafababd6291e8692d70eb088/examples/camera_manipulation.ipynb
             // Yet another case where 99% can work, but 1% can fail when testing.
-            // tslint:disable-next-line: no-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             newBufferView.push([...new Uint8Array(item as any)]);
         }
     }

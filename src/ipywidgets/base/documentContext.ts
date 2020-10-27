@@ -10,7 +10,7 @@ import { IRenderMime } from '@jupyterlab/rendermime';
 import { Contents, Kernel, KernelMessage, Session } from '@jupyterlab/services';
 import { Widget } from '@phosphor/widgets';
 import { Signal } from './signal';
-// tslint:disable: no-any
+
 export class DocumentContext implements DocumentRegistry.IContext<INotebookModel>, IClientSession {
     public pathChanged = new Signal<this, string>();
     public fileChanged = new Signal<this, Contents.IModel>();

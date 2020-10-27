@@ -2,14 +2,14 @@
 // Licensed under the MIT License.
 
 // This must be on top, do not change. Required by webpack.
-declare let __webpack_public_path__: string;
-const getPublicPath = () => {
-    const currentDirname = (document.currentScript as HTMLScriptElement).src.replace(/[^/]+$/, '');
-    return new URL(currentDirname).toString();
-};
+// declare let __webpack_public_path__: string;
+// const getPublicPath = () => {
+//     const currentDirname = (document.currentScript as HTMLScriptElement).src.replace(/[^/]+$/, '');
+//     return new URL(currentDirname).toString();
+// };
 
-// eslint-disable-next-line prefer-const
-__webpack_public_path__ = getPublicPath();
+// // eslint-disable-next-line prefer-const
+// __webpack_public_path__ = getPublicPath();
 // This must be on top, do not change. Required by webpack.
 
 // export { JupyterlabWidgetManager as WidgetManager } from './base/manager';
@@ -364,41 +364,19 @@ function renderIPyWidget(
         })
         .catch((ex) => console.error('Failed to render', ex));
 }
-// function destroyIPyWidget(ele: HTMLElement) {
-//     if (!outputDisposables2.has(ele)) {
-//         return;
-//     }
-//     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-//     outputDisposables2.get(ele)!.dispose();
-//     outputDisposables2.delete(ele);
-// }
-// /**
-//  * Possible the pre-render scripts load late, after we have attempted to render output from notebook.
-//  * At this point look through all such scripts and render the output.
-//  */
-// function renderOnLoad() {
-//     document
-//         .querySelectorAll<HTMLScriptElement>('script[type="application/vscode-jupyter-ipywidget+json"]')
-//         .forEach(renderOutput);
-// }
-
-// tslint:disable-next-line: no-any
-// function postToRendererExtension(type: string, payload: any) {
-//     notebookApi.postMessage({ type, payload });
-// }
-// tslint:disable-next-line: no-any
 
 class MyPostOffice implements IPyWidgetsPostOffice {
     public get settings(): IPyWidgetsSettings | undefined {
         return { timeoutWaitingForWidgetsToLoad: 5_000 };
     }
-    // tslint:disable-next-line: no-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public get onDidReceiveKernelMessage(): Event<any> {
         return this._gotMessage.event;
     }
     private readonly _gotMessage = createEmitter();
     private readonly backendReady = createDeferred();
     private readonly scripts = new Map<string, Deferred<WidgetScriptSource>>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     constructor(private readonly api: NotebookRendererApi<any>) {
         try {
             // For testing, we might use a  browser to load  the stuff.

@@ -27,7 +27,7 @@ export async function waitForPromise<T>(promise: Promise<T>, timeout: number): P
     });
 }
 
-// tslint:disable-next-line: no-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isPromise<T>(v: any): v is Promise<T> {
     return typeof v?.then === 'function' && typeof v?.catch === 'function';
 }
@@ -42,18 +42,18 @@ export interface Deferred<T> {
     readonly rejected: boolean;
     readonly completed: boolean;
     resolve(value?: T | PromiseLike<T>): void;
-    // tslint:disable-next-line:no-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     reject(reason?: any): void;
 }
 
 class DeferredImpl<T> implements Deferred<T> {
     private _resolve!: (value?: T | PromiseLike<T>) => void;
-    // tslint:disable-next-line:no-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private _reject!: (reason?: any) => void;
-    private _resolved: boolean = false;
-    private _rejected: boolean = false;
+    private _resolved?: boolean;
+    private _rejected?: boolean;
     private _promise: Promise<T>;
-    // tslint:disable-next-line:no-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     constructor(private scope: any = null) {
         // tslint:disable-next-line:promise-must-complete
         this._promise = new Promise<T>((res, rej) => {
@@ -62,13 +62,13 @@ class DeferredImpl<T> implements Deferred<T> {
         });
     }
     public resolve(_value?: T | PromiseLike<T>) {
-        // tslint:disable-next-line:no-any
+        // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-explicit-any
         this._resolve.apply(this.scope ? this.scope : this, arguments as any);
         this._resolved = true;
     }
-    // tslint:disable-next-line:no-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public reject(_reason?: any) {
-        // tslint:disable-next-line:no-any
+        // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-explicit-any
         this._reject.apply(this.scope ? this.scope : this, arguments as any);
         this._rejected = true;
     }
@@ -76,16 +76,16 @@ class DeferredImpl<T> implements Deferred<T> {
         return this._promise;
     }
     get resolved(): boolean {
-        return this._resolved;
+        return !!this._resolved;
     }
     get rejected(): boolean {
         return this._rejected;
     }
     get completed(): boolean {
-        return this._rejected || this._resolved;
+        return this._rejected || !!this._resolved;
     }
 }
-// tslint:disable-next-line:no-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createDeferred<T>(scope: any = null): Deferred<T> {
     return new DeferredImpl<T>(scope);
 }
@@ -93,9 +93,9 @@ export function createDeferred<T>(scope: any = null): Deferred<T> {
 export function createDeferredFrom<T>(...promises: Promise<T>[]): Deferred<T> {
     const deferred = createDeferred<T>();
     Promise.all<T>(promises)
-        // tslint:disable-next-line:no-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .then(deferred.resolve.bind(deferred) as any)
-        // tslint:disable-next-line:no-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .catch(deferred.reject.bind(deferred) as any);
 
     return deferred;

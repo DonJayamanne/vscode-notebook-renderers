@@ -6,11 +6,15 @@
 import * as isonline from 'is-online';
 import * as React from 'react';
 import { createDeferred, Deferred } from './misc/async';
-// import '../../client/common/extensions';
-// import { warnAboutWidgetVersionsThatAreNotSupported } from './incompatibleWidgetHandler';
 import { createManager } from './manager';
 import { registerScripts } from './requirejsRegistry';
-import { SharedMessages, WidgetScriptSource, IPyWidgetMessages, IPyWidgetsPostOffice, IIPyWidgetManager } from './types';
+import {
+    SharedMessages,
+    WidgetScriptSource,
+    IPyWidgetMessages,
+    IPyWidgetsPostOffice,
+    IIPyWidgetManager
+} from './types';
 
 type Props = {
     postOffice: IPyWidgetsPostOffice;
@@ -69,9 +73,6 @@ export class WidgetManagerComponent extends React.Component<Props> {
                 // If user changed the kernel, then some widgets might exist now and some might now.
                 this.widgetSourceRequests.clear();
                 this.registeredWidgetSources.clear();
-                // } else {
-                //     // tslint:disable-next-line: no-console
-                //     console.error(`Got unknown Message 2 ${type}`, msg);
             }
         });
     }
@@ -87,6 +88,7 @@ export class WidgetManagerComponent extends React.Component<Props> {
         moduleName: string,
         moduleVersion: string,
         // tslint:disable-next-line: no-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         error: any,
         timedout = false
     ) {
