@@ -1,0 +1,31 @@
+{
+    "extends": "../tsconfig-base.json",
+    "compilerOptions": {
+        // "noEmit": true,
+        "composite": true,
+        "declaration": true,
+        "esModuleInterop": true,
+        "incremental": true,
+        "moduleResolution": "node",
+        "noEmitOnError": true,
+        "preserveWatchOutput": true,
+        "resolveJsonModule": true,
+        "types": [],
+        "module": "esnext",
+        "target": "es2017",
+        "rootDir": ".",
+        "lib": ["ES2019", "dom"],
+        "jsx": "react",
+        "sourceMap": true,
+        "outDir": "../../out/kernel",
+        "experimentalDecorators": true,
+        "allowSyntheticDefaultImports": true,
+        "strict": false,
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true
+    },
+    "exclude": ["node_modules", "../node_modules"]
+}
